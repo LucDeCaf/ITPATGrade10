@@ -109,4 +109,19 @@ object frmStudy: TfrmStudy
     TabOrder = 7
     OnClick = bbnResetClick
   end
+  object redStats: TRichEdit
+    Left = 480
+    Top = 157
+    Width = 96
+    Height = 145
+    Alignment = taCenter
+    Enabled = False
+    Font.Charset = ANSI_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -12
+    Font.Name = 'JetBrains Mono'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 8
+  end
 end

@@ -5,7 +5,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, Vcl.ExtCtrls,
+  Vcl.ComCtrls;
 
 type
   TfrmStudy = class(TForm)
@@ -17,6 +18,9 @@ type
     bbnYes: TBitBtn;
     btnLoad: TButton;
     bbnReset: TBitBtn;
+    redStats: TRichEdit;
+    procedure updateStatsheet;
+    procedure resetAll;
     procedure bbnBackClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormActivate(Sender: TObject);
@@ -33,20 +37,17 @@ type
 
 var
   frmStudy: TfrmStudy;
-
   terms, definitions: TStringList;
   unknownTerms, unknownDefinitions: TStringList;
-
   iSelectedTermIndex: Integer = 0;
-
   bShowingTerm, bTermsLoaded: Bool;
-
   sLoadedSetName: String;
+  iTermsKnown, iTermsUnknown, iRounds: Integer;
 
 implementation
 
 uses
-  uMainMenu;
+  uMainMenu, uAdd;
 
 {$R *.dfm}
 
@@ -55,10 +56,8 @@ var
   i: Integer;
   sFlashcardId: String;
 begin
-  terms := TStringList.Create;
-  definitions := TStringList.Create;
-  unknownTerms := TStringList.Create;
-  unknownDefinitions := TStringList.Create;
+  // Re-initialise everything
+  resetAll;
 
   if not FileExists('flashcard_ids.txt') then
   begin
@@ -66,14 +65,13 @@ begin
     frmMainMenu.Close;
   end;
 
-  if cmbSet.Items.Count = 0 then
+  cmbSet.Items.Clear;
+  for i := 0 to frmMainMenu.flashcardIds.Count - 1 do
   begin
-    for i := 0 to frmMainMenu.flashcardIds.Count - 1 do
-    begin
-      sFlashcardId := Copy(frmMainMenu.flashcardIds[i], 0,
-        frmMainMenu.flashcardIds[i].IndexOf(','));
-      cmbSet.Items.Add(sFlashcardId);
-    end;
+    sFlashcardId := Copy(frmMainMenu.flashcardIds[i],
+      frmMainMenu.flashcardIds[i].IndexOf(',') + 2,
+      frmMainMenu.flashcardIds[i].Length);
+    cmbSet.Items.Add(sFlashcardId);
   end;
 end;
 
@@ -96,9 +94,18 @@ begin
 end;
 
 procedure TfrmStudy.bbnBackClick(Sender: TObject);
+var
+  bConfirmed: Bool;
 begin
-  frmStudy.Hide;
-  frmMainMenu.Show;
+  bConfirmed := MessageDlg
+    ('Warning: If you leave now, all unsaved changes will be deleted. Continue exiting?',
+    mtWarning, mbOKCancel, 0) = mrOK;
+
+  if bConfirmed then
+  begin
+    frmStudy.Hide;
+    frmMainMenu.Show;
+  end;
 end;
 
 procedure TfrmStudy.bbnNoClick(Sender: TObject);
@@ -118,7 +125,11 @@ begin
     unknownDefinitions.Clear;
 
     iSelectedTermIndex := -1;
+
+    Inc(iRounds);
   end;
+
+  updateStatsheet;
 
   Inc(iSelectedTermIndex);
   pnlFlashcard.Caption := terms[iSelectedTermIndex];
@@ -145,20 +156,25 @@ begin
     definitions.Assign(unknownDefinitions);
     unknownDefinitions.Clear;
 
+    Inc(iRounds);
+
     if terms.Count = 0 then
     begin
-      ShowMessage('You have successfully memorised all terms!');
-      pnlFlashcard.Caption := 'Select a set';
-      pnlSetName.Caption := 'Select a set';
+      ShowMessage('You have successfully memorised all terms!' + sLineBreak +
+        'Rounds taken: ' + IntToStr(iRounds));
 
-      bTermsLoaded := false;
+      resetAll;
 
-      btnLoad.SetFocus;
       Exit;
     end;
 
     iSelectedTermIndex := -1;
   end;
+
+  Inc(iTermsKnown);
+  Dec(iTermsUnknown);
+
+  updateStatsheet;
 
   Inc(iSelectedTermIndex);
   pnlFlashcard.Caption := terms[iSelectedTermIndex];
@@ -168,16 +184,19 @@ end;
 
 procedure TfrmStudy.btnLoadClick(Sender: TObject);
 var
+  sBackendSetName: String;
   loadedTerms: TStringList;
 begin
-  if not FileExists('flashcards\' + cmbSet.Text) then
+  sBackendSetName := frmAdd.ConvertToValidFileName(cmbSet.Text);
+
+  if not FileExists('flashcards\' + sBackendSetName) then
   begin
     ShowMessage('Could not find file with name "' + cmbSet.Text + '"');
     Exit;
   end;
 
   loadedTerms := TStringList.Create;
-  loadedTerms.LoadFromFile('flashcards\' + cmbSet.Text);
+  loadedTerms.LoadFromFile('flashcards\' + sBackendSetName);
 
   sLoadedSetName := cmbSet.Text;
 
@@ -189,6 +208,10 @@ begin
       definitions.Add(loadedTerms[i]);
   end;
 
+  iRounds := 0;
+  iTermsKnown := 0;
+  iTermsUnknown := terms.Count;
+
   pnlSetName.Caption := Copy(frmMainMenu.flashcardIds[cmbSet.ItemIndex],
     frmMainMenu.flashcardIds[cmbSet.ItemIndex].IndexOf(',') + 2);
 
@@ -198,6 +221,35 @@ begin
   bTermsLoaded := true;
 
   pnlFlashcard.Caption := terms[iSelectedTermIndex];
+end;
+
+procedure TfrmStudy.updateStatsheet;
+begin
+  redStats.Lines.Clear;
+  redStats.Lines.Add(sLineBreak);
+  redStats.Lines.Add('-- Stats --');
+  redStats.Lines.Add('Rounds: ' + IntToStr(iRounds));
+  redStats.Lines.Add('Known: ' + IntToStr(iTermsKnown));
+  redStats.Lines.Add('Unknown: ' + IntToStr(iTermsUnknown));
+end;
+
+procedure TfrmStudy.resetAll;
+begin
+  terms := TStringList.Create;
+  definitions := TStringList.Create;
+  unknownTerms := TStringList.Create;
+  unknownDefinitions := TStringList.Create;
+  sLoadedSetName := '';
+  iSelectedTermIndex := 0;
+  bShowingTerm := true;
+  bTermsLoaded := false;
+  pnlFlashcard.Caption := 'Select a set';
+  pnlSetName.Caption := 'Select a set';
+  cmbSet.Text := 'Select a set...';
+  redStats.Lines.Clear;
+  redStats.Lines.AddStrings([sLineBreak, '-- Stats --', 'Rounds: N/A',
+    'Known: N/A', 'Unknown: N/A']);
+  cmbSet.SetFocus;
 end;
 
 end.

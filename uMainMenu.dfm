@@ -2,8 +2,8 @@ object frmMainMenu: TfrmMainMenu
   Left = 0
   Top = 0
   Caption = 'Flashcard City'
-  ClientHeight = 462
-  ClientWidth = 588
+  ClientHeight = 461
+  ClientWidth = 584
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText

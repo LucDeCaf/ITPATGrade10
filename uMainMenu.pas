@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
-  System.Classes, Vcl.Graphics,
+  System.Classes, Vcl.Graphics, ShellAPI,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Buttons, Vcl.ExtCtrls, Vcl.StdCtrls;
 
 type
@@ -32,7 +32,7 @@ var
 implementation
 
 uses
-  uStudy, uAdd, uInfo;
+  uStudy, uAdd;
 
 {$R *.dfm}
 
@@ -42,9 +42,12 @@ begin
 end;
 
 procedure TfrmMainMenu.bbnInfoClick(Sender: TObject);
+var
+  sUrl: String;
 begin
-  frmInfo.Show;
-  frmMainMenu.Hide;
+  sUrl := 'https://en.wikipedia.org/wiki/Main_Page';
+  sUrl := StringReplace(sUrl, '"', '%22', [rfReplaceAll]);
+  ShellExecute(0, 'open', PChar(sUrl), nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TfrmMainMenu.btnAddClick(Sender: TObject);

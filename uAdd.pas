@@ -27,6 +27,7 @@ type
     btnLoad: TButton;
     cmbSetName: TComboBox;
     lblSetNameHelper: TLabel;
+    function ConvertToValidFileName(name: String): String;
     procedure bbnBackClick(Sender: TObject);
     procedure AddTerm(term, definition: String);
     procedure btnAddTermClick(Sender: TObject);
@@ -55,7 +56,8 @@ uses
 
 {$R *.dfm}
 
-function ConvertToValidFileName(name: String): String;
+// Helper function to convert frontend set names into a deterministic file name
+function TfrmAdd.ConvertToValidFileName(name: String): String;
 var
   i: Integer;
 begin
@@ -107,9 +109,18 @@ begin
 end;
 
 procedure TfrmAdd.bbnBackClick(Sender: TObject);
+var
+  bConfirmed: Bool;
 begin
-  frmAdd.Hide;
-  frmMainMenu.Show;
+  bConfirmed := MessageDlg
+    ('Warning: If you leave now, all unsaved changes will be deleted. Continue exiting?',
+    mtWarning, mbOKCancel, 0) = mrOK;
+
+  if bConfirmed then
+  begin
+    frmAdd.Hide;
+    frmMainMenu.Show;
+  end;
 end;
 
 procedure TfrmAdd.bbnDeleteAllClick(Sender: TObject);
@@ -162,7 +173,7 @@ begin
       termDict[sTerm], '');
     sNewDefinition := sNewDefinition.Trim;
 
-    if sNewDefinition.Length <= 200 then
+    if sNewDefinition.Length > 0 then
     begin
       termDict[sTerm] := sNewDefinition;
       lsbSampleTerms.Items[lsbSampleTerms.Items.IndexOf(sTerm) + 1] :=
@@ -171,7 +182,7 @@ begin
 
     else
     begin
-      ShowMessage('Invalid input: Too long');
+      ShowMessage('Error: Cannot save an empty definition');
     end;
   end;
 end;
@@ -179,10 +190,6 @@ end;
 procedure TfrmAdd.bbnSaveClick(Sender: TObject);
 var
   sSetName, sBackendSetName: String;
-  i: Integer;
-  terms: TStringList;
-  sFlashcardId: String;
-
 begin
   sSetName := cmbSetName.Text;
   sSetName := sSetName.Trim;
@@ -206,7 +213,7 @@ begin
     terms.Add(pair.Value);
   end;
 
-  // Handle empty termDict
+  // Handle deletion
   if (terms.Count = 0) then
   begin
 
@@ -221,8 +228,8 @@ begin
 
       terms.Free;
 
-      // Note: Using cmbSetName.Items[cmbSetName.ItemIndex] instead of sSetName
-      // to ensure correct capitalisation
+      { Note: Using cmbSetName.Items[cmbSetName.ItemIndex] instead of sSetName
+        to ensure correct capitalisation }
       frmMainMenu.flashcardIds.Delete
         (frmMainMenu.flashcardIds.IndexOf(sBackendSetName + ',' +
         cmbSetName.Items[cmbSetName.ItemIndex]));
@@ -234,9 +241,10 @@ begin
       // Clean up
       bbnDeleteAllClick(Sender);
       FormActivate(Sender);
-      bbnBackClick(Sender);
       lblSetNameHelper.Visible := false;
       cmbSetName.Text := '';
+      frmAdd.Hide;
+      frmMainMenu.Show;
 
       Exit;
     end
@@ -248,29 +256,19 @@ begin
     end;
   end
 
+  // Saving + Editing
   else
   begin
+    // Handle new set
+    if not FileExists('flashcards\' + sBackendSetName) then
+    begin
+      frmMainMenu.flashcardIds.Add(sBackendSetName + ',' + sSetName);
+    end;
+
     try
       terms.SaveToFile('flashcards\' + sBackendSetName);
     finally
       terms.Free;
-    end;
-
-    // Update flashcardIds and flashcard_ids.txt
-    if FileExists('flashcards\' + sBackendSetName) then
-    begin
-      frmStudy.cmbSet.Items.Clear;
-
-      for i := 0 to frmMainMenu.flashcardIds.Count - 1 do
-      begin
-        sFlashcardId := Copy(frmMainMenu.flashcardIds[i], 0,
-          frmMainMenu.flashcardIds[i].IndexOf(','));
-        frmStudy.cmbSet.Items.Add(sFlashcardId);
-      end;
-    end
-    else
-    begin
-      frmMainMenu.flashcardIds.Add(sBackendSetName + ',' + sSetName);
     end;
   end;
 
@@ -278,16 +276,19 @@ begin
     frmMainMenu.flashcardIds.SaveToFile('flashcard_ids.txt');
     ShowMessage('Set successfully saved.');
   finally
+    // Clean up
     bbnDeleteAllClick(Sender);
-    bbnBackClick(Sender);
+    FormActivate(Sender);
+    lblSetNameHelper.Visible := false;
+    cmbSetName.Text := '';
+    frmAdd.Hide;
+    frmMainMenu.Show;
   end;
 end;
 
 procedure TfrmAdd.btnAddTermClick(Sender: TObject);
 var
-  bIsValid: Bool;
   sTerm, sDefinition: String;
-  sSampleTerm, sSampleDefinition: String;
 begin
   sTerm := edtTerm.Text;
   sDefinition := edtDefinition.Text;
