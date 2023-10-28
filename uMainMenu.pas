@@ -45,7 +45,7 @@ procedure TfrmMainMenu.bbnInfoClick(Sender: TObject);
 var
   sUrl: String;
 begin
-  sUrl := 'https://en.wikipedia.org/wiki/Main_Page';
+  sUrl := 'https://flashcard-city.netlify.app/';
   sUrl := StringReplace(sUrl, '"', '%22', [rfReplaceAll]);
   ShellExecute(0, 'open', PChar(sUrl), nil, nil, SW_SHOWNORMAL);
 end;
