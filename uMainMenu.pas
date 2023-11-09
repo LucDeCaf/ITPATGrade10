@@ -46,7 +46,6 @@ var
   sUrl: String;
 begin
   sUrl := 'https://flashcard-city.netlify.app/';
-  sUrl := StringReplace(sUrl, '"', '%22', [rfReplaceAll]);
   ShellExecute(0, 'open', PChar(sUrl), nil, nil, SW_SHOWNORMAL);
 end;
 
