@@ -28,6 +28,7 @@ type
 
 var
   frmMainMenu: TfrmMainMenu;
+  clPrimary, clSecondary, clLight, clDark: TColor;
 
 implementation
 
@@ -37,8 +38,16 @@ uses
 {$R *.dfm}
 
 procedure TfrmMainMenu.bbnExitClick(Sender: TObject);
+var
+  bConfirmed: Bool;
 begin
-  frmMainMenu.Close;
+  // frmMainMenu.Close;
+
+  bConfirmed := MessageDlg('Are you sure you would like to exit?', mtWarning,
+    mbOKCancel, 0) = mrOK;
+
+  if bConfirmed then
+    Exit;
 end;
 
 procedure TfrmMainMenu.bbnInfoClick(Sender: TObject);
@@ -46,7 +55,6 @@ var
   sUrl: String;
 begin
   sUrl := 'https://flashcard-city.netlify.app/';
-  sUrl := StringReplace(sUrl, '"', '%22', [rfReplaceAll]);
   ShellExecute(0, 'open', PChar(sUrl), nil, nil, SW_SHOWNORMAL);
 end;
 
@@ -94,6 +102,20 @@ begin
   begin
     CreateDir('flashcards');
   end;
+
+  // Load colours
+  clPrimary := RGB(91, 133, 170);
+  clSecondary := RGB(165, 190, 0);
+  clLight := RGB(235, 242, 250);
+  clDark := RGB(0, 5, 0);
+
+  frmMainMenu.Color := clPrimary;
+  uAdd.frmAdd.Color := clPrimary;
+  uStudy.frmStudy.Color := clPrimary;
+
+  pnlTitle.Color := clLight;
+  uStudy.frmStudy.pnlSetName.Color := clLight;
+  uStudy.frmStudy.pnlFlashcard.Color := clLight;
 end;
 
 end.
