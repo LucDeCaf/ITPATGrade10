@@ -116,6 +116,10 @@ begin
   pnlTitle.Color := clLight;
   uStudy.frmStudy.pnlSetName.Color := clLight;
   uStudy.frmStudy.pnlFlashcard.Color := clLight;
+
+  pnlTitle.ParentBackground := False;
+  uStudy.frmStudy.pnlSetName.ParentBackground := False;
+  uStudy.frmStudy.pnlFlashcard.ParentBackground := False;
 end;
 
 end.
